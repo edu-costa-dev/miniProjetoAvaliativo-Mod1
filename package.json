@@ -1,0 +1,29 @@
+{
+  "name": "miniprojetoavaliativo-mod1",
+  "version": "1.0.0",
+  "description": "| Informação | | | ---: | :--- | Nome do projeto: | **Mini Projeto de E-Commerce** Nome do estudante e turma: | **Antonio Eduardo da Costa - Turma 6** Objetivo da aplicação:  | **Gerenciamento e Consulta de Produtos e Clientes** Funcionalidades implementadas: | **Consultar Clientes, Consultar Produots, Relatorio de Vendas, Relatorio Individual de Vendas, Carrinho** Tecnologias utilizadas: | **TypeScript, Node.JS**",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/edu-costa-dev/miniProjetoAvaliativo-Mod1.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/edu-costa-dev/miniProjetoAvaliativo-Mod1/issues"
+  },
+  "homepage": "https://github.com/edu-costa-dev/miniProjetoAvaliativo-Mod1#readme",
+  "dependencies": {
+    "prompt-sync": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@types/prompt-sync": "^4.2.3",
+    "typescript": "^7.0.2"
+  }
+}
