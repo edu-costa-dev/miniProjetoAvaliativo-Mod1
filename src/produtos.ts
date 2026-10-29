@@ -6,6 +6,17 @@ const produtos: produto[] = [
     { id: 3, nome: "Monitor 24 polegadas", categoria: "Monitores", preco: 900, estoque: 5 },
 ];
 
+function baixarEstoque(id: number, quantidade: number): void {
+    const produtoAtual = produtos.find((produtoDoCatalogo) => produtoDoCatalogo.id === id);
+    if (!produtoAtual) {
+        throw new Error(`Produto com ID ${id} não encontrado.`);
+    }
+    if (!Number.isInteger(quantidade) || quantidade <= 0 || quantidade > produtoAtual.estoque) {
+        throw new Error(`Não há estoque suficiente do produto "${produtoAtual.nome}".`);
+    }
+    produtoAtual.estoque -= quantidade;
+}
+
 function listarProdutos(): produto[] {
     return produtos.map((produtoAtual) => ({ ...produtoAtual }));
 }
@@ -89,4 +100,5 @@ export {
     filtrarProdutosPorCategoria,
     atualizarProduto,
     removerProduto,
+    baixarEstoque,
 };

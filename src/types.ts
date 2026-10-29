@@ -5,21 +5,39 @@ type cliente = {
 }
 
 type produto = {
-id: number
-nome: string
-categoria: string
-preco: number
-estoque: number
-}
+    id: number;
+    nome: string;
+    categoria: string;
+    preco: number;
+    estoque: number;
+};
 
-type carrinho = {
+type itemCarrinho = {
+    produtoId: number;
+    quantidade: number;
+};
 
-}
+type itemPedido = {
+    produtoId: number;
+    nomeProduto: string;
+    categoria: string;
+    quantidade: number;
+    precoUnitario: number;
+    subtotal: number;
+};
 
-type compras = {
+type pedido = {
+    id: number;
+    clienteId: number;
+    itens: itemPedido[];
+    total: number;
+    data: string;
+};
 
-}
-
-export type{
-    cliente
-}
+export type {
+    cliente,
+    produto,
+    itemCarrinho,
+    itemPedido,
+    pedido
+};

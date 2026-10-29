@@ -5,13 +5,13 @@ import {
         buscarClientes
         } from "./clientes";
 import type {
-            cliente
+            cliente,
+            produto
             } from "./types";
 import {
             listarProdutos,
             cadProduto,
             validarProduto,
-            listarProdutos,
             buscarProduto,
             buscarProdutosPorNome,
             filtrarProdutosPorCategoria,
@@ -19,7 +19,11 @@ import {
             removerProduto
 } from "./produtos";
 
+import { calcularTotal, itemCarrinhoDetalhado, obterCarrinho } from "./carrinho";
+import { finalizarPedido, listarPedidos, listarPedidosPorCliente } from "./pedidos";
+
 const prompt = promptSync({sigint: true})
+const moeda = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 //===========================================================================================================================
 
 
@@ -30,7 +34,102 @@ const prompt = promptSync({sigint: true})
 
 //===========================================================================================================================
 
+//Listar itens
+function listarItens(clienteId: number): itemCarrinhoDetalhado[] {
+    return obterCarrinho(clienteId).map((item) => {
+        const produtoAtual = buscarProduto(item.produtoId);
+        if (!produtoAtual) {
+            throw new Error(`Produto com ID ${item.produtoId} não encontrado.`);
+        }
+        return {
+            ...item,
+            nomeProduto: produtoAtual.nome,
+            precoUnitario: produtoAtual.preco,
+            subtotal: produtoAtual.preco * item.quantidade,
+        };
+    });
+}
 
+//Imprimir carrinho
+function imprimirCarrinho(clienteAtual: cliente): void {
+    const itens = listarItens(clienteAtual.id);
+    console.log(`\nCarrinho de ${clienteAtual.nome} (ID ${clienteAtual.id})`);
+    if (itens.length === 0) {
+        console.log("O carrinho está vazio.");
+        return;
+    }
+    console.table(itens.map((item) => ({
+        produtoId: item.produtoId,
+        produto: item.nomeProduto,
+        quantidade: item.quantidade,
+        precoUnitario: moeda.format(item.precoUnitario),
+        subtotal: moeda.format(item.subtotal),
+    })));
+    console.log(`Total da compra: ${moeda.format(calcularTotal(clienteAtual.id))}`);
+}
+
+//Revisar e Finalizar carrinho
+function executarComCarrinho(acao: (clienteAtual: cliente) => void): void {
+    const clienteAtual = selecionaCliente();
+    if (!clienteAtual) return;
+    acao(clienteAtual);
+}
+
+//Menu Principal -> Cadastro/Consulta de PEDIDOS
+function menuPedidos(): void {
+    let opcao = "";
+    while (opcao !== "0") {
+        console.log("\n=== Pedidos ===");
+        console.log("1 - Revisar carrinho e finalizar pedido");
+        console.log("2 - Consultar todos os pedidos");
+        console.log("3 - Consultar pedidos de um cliente");
+        console.log("0 - Voltar");
+        opcao = prompt("Escolha: ").trim();
+        switch (opcao) {
+            case "1":
+                executarAcao(() => executarComCarrinho((clienteAtual) => {
+                    imprimirCarrinho(clienteAtual);
+                    if (listarItens(clienteAtual.id).length === 0) {
+                        throw new Error("Adicione produtos ao carrinho antes de finalizar.");
+                    }
+                    const confirmar = prompt("Deseja finalizar a compra? (s/n): ").trim().toLowerCase();
+                    if (confirmar !== "s") {
+                        console.log("Finalização cancelada; o carrinho foi mantido.");
+                        return;
+                    }
+                    const pedido = finalizarPedido(clienteAtual.id);
+                    console.log(`Pedido #${pedido.id} finalizado. Total: ${moeda.format(pedido.total)}`);
+                }));
+                break;
+            case "2":
+                console.table(listarPedidos().map((pedido) => ({
+                    id: pedido.id,
+                    clienteId: pedido.clienteId,
+                    data: pedido.data,
+                    total: moeda.format(pedido.total),
+                })));
+                break;
+            case "3":
+                executarAcao(() => {
+                    const clienteAtual = selecionaCliente();
+                    const pedidos = listarPedidosPorCliente(clienteAtual.id);
+                    console.table(pedidos.map((pedido) => ({
+                        id: pedido.id,
+                        data: pedido.data,
+                        total: moeda.format(pedido.total),
+                    })));
+                    if (pedidos.length === 0) {
+                        console.log("Esse cliente ainda não tem pedidos.");
+                    }
+                });
+                break;
+            case "0":
+                break;
+            default:
+                console.log("Opção inválida.");
+        }
+    }
+}
 
 //===========================================================================================================================
 
@@ -100,6 +199,7 @@ function subMenuProdutos(): void{
                     const produtoAtual = buscarProduto(id);
                     if (!produtoAtual) {
                         console.log("Produto não encontrado.");
+                        return;
                     }
                     const nome = prompt(`Nome [${produtoAtual.nome}]: `).trim();
                     const categoria = prompt(`Categoria [${produtoAtual.categoria}]: `).trim();
@@ -166,22 +266,23 @@ function selecionaCliente(): cliente | undefined {
     }
     if (tipoBusca === "2"){
         const nome = lerTexto(`Digite o nome ou parte do nome do cliente para realizar a busca: `);
-        const buscaCliente = listaDeClientes().filter((clienteAtual)=>
+        const buscaCliente = listarClientes().filter((clienteAtual)=>
             clienteAtual.nome.includes(nome),
     );
-    if (tipoBusca.length === 0){
+    if (buscaCliente.length === 0){
         console.log(`Nenhum cliente encontrado com esse nome...`);
     }
-    if (tipoBusca.length === 1){
-        return tipoBusca[0]!;
+    if (buscaCliente.length === 1){
+        return buscaCliente[0]!;
     }
-    console.log(tipoBusca);
+    console.log(buscaCliente);
     const id = lerNumero(`Há mais de um resultado. Digite o ID desejado: `);
-    const clienteEscolhido = tipoBusca.find((clienteAtual) => clienteAtual.id === id);
+    const clienteEscolhido = buscaCliente.find((clienteAtual) => clienteAtual.id === id);
     if (!clienteEscolhido){
         console.log(`O ID informado não está enre os clientes encontrados.`);
     }
     console.log(`Escolha 1 para buscar por ID ou 2 para buscar por NOME.`);
+    return clienteEscolhido;
     }
 }
 
@@ -289,6 +390,7 @@ function menuPrincipal(): void {
                     subMenuProdutos();
                     break;
                 case "3":
+                    subMenuPedidos()
                     break;
                 case "4":
                     break;
