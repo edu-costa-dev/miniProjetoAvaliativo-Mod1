@@ -76,7 +76,7 @@ function executarComCarrinho(acao: (clienteAtual: cliente) => void): void {
 }
 
 //Menu Principal -> Cadastro/Consulta de PEDIDOS
-function menuPedidos(): void {
+function subMenuPedidos(): void {
     let opcao = "";
     while (opcao !== "0") {
         console.log("\n=== Pedidos ===");
@@ -112,6 +112,9 @@ function menuPedidos(): void {
             case "3":
                 executarAcao(() => {
                     const clienteAtual = selecionaCliente();
+                    if (!clienteAtual) {
+                        return;
+                    }
                     const pedidos = listarPedidosPorCliente(clienteAtual.id);
                     console.table(pedidos.map((pedido) => ({
                         id: pedido.id,
