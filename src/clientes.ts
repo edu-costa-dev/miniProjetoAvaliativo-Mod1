@@ -7,6 +7,21 @@ const clientes: cliente[] = [
 ];
 
 function cadCliente(cliente: cliente): void {
+        if (!Number.isInteger(cliente.id) || cliente.id <= 0) {
+        console.log("O ID do cliente deve ser um número inteiro maior que zero.");
+    }
+    if (!cliente.nome.trim() || !cliente.email.trim()) {
+        console.log("Nome e e-mail do cliente são obrigatórios.");
+    }
+    if (!cliente.email.includes("@")) {
+        console.log("Informe um e-mail válido.");
+    }
+    if (clientes.some((clienteAtual) => clienteAtual.id === cliente.id)) {
+        console.log(`Já existe um cliente com o ID ${cliente.id}.`);
+    }
+    if (clientes.some((clienteAtual) => clienteAtual.email.toLowerCase() === cliente.email.trim().toLowerCase())) {
+        console.log("Já existe um cliente com esse e-mail.");
+    }
     clientes.push({
         ...cliente,
         nome: cliente.nome.trim(),

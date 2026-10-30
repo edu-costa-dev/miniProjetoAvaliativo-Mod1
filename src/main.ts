@@ -1,35 +1,150 @@
 import promptSync from "prompt-sync";
-import {
-        cadCliente,
-        listarClientes,
-        buscarClientes
-        } from "./clientes";
-import type {
-            cliente,
-            produto
-            } from "./types";
-import {
-            listarProdutos,
-            cadProduto,
-            validarProduto,
-            buscarProduto,
-            buscarProdutosPorNome,
-            filtrarProdutosPorCategoria,
-            atualizarProduto,
-            removerProduto
-} from "./produtos";
-
-import { calcularTotal, itemCarrinhoDetalhado, obterCarrinho } from "./carrinho";
+import { cadCliente, listarClientes, buscarClientes } from "./clientes";
+import type { cliente,produto } from "./types";
+import { listarProdutos,cadProduto,validarProduto,buscarProduto,buscarProdutosPorNome,filtrarProdutosPorCategoria,atualizarProduto,removerProduto} from "./produtos";
+import { calcularTotal, itemCarrinhoDetalhado, obterCarrinho, adicionarItem, alterarQuantidade,removerItem } from "./carrinho";
 import { finalizarPedido, listarPedidos, listarPedidosPorCliente } from "./pedidos";
+import { gerarRelatorioVendas, gerarVendasPorCategoria, gerarVendasPorProduto, gerarVendasPorProdutoId, } from "./relatorios";
 
 const prompt = promptSync({sigint: true})
 const moeda = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 //===========================================================================================================================
 
+//Menu Principal -> Relatórios
+function menuRelatorios(): void {
+    let opcao = "";
+    while (opcao !== "0") {
+        console.log("\n=== Relatórios de vendas ===");
+        console.log("1 - Resumo geral das vendas");
+        console.log("2 - Vendas por categoria");
+        console.log("3 - Vendas por produto (ID)");
+        console.log("0 - Voltar");
+        opcao = prompt("Escolha: ").trim();
+        switch (opcao) {
+            case "1":
+                console.table([gerarRelatorioVendas()]);
+                break;
+            case "2":
+                console.table(gerarVendasPorCategoria());
+                break;
+            case "3":
+                executarAcao(() => {
+                    const vendas = gerarVendasPorProduto();
+                    if (vendas.length > 0) {
+                        console.table(vendas);
+                    } else {
+                        console.log("Ainda não há vendas registradas.");
+                    }
+                    const id = lerNumero("Consultar um produto específico por ID? Digite o ID ou 0 para não: ");
+                    if (id > 0) {
+                        console.table([gerarVendasPorProdutoId(id)]);
+                    }
+                });
+                break;
+            case "0":
+                break;
+            default:
+                console.log("Opção inválida.");
+        }
+    }
+}
 
+
+//Menu Principal -> Consulta de ESTOQUE
+function menuEstoque(): void {
+    let opcao = "";
+    while (opcao !== "0") {
+        console.log("\n=== Estoque ===");
+        console.log("1 - Consultar estoque atual");
+        console.log("2 - Atualizar estoque de um produto");
+        console.log("0 - Voltar");
+        opcao = prompt("Escolha: ").trim();
+        switch (opcao) {
+            case "1":
+                console.table(listarProdutos().map((produtoAtual) => ({
+                    id: produtoAtual.id,
+                    nome: produtoAtual.nome,
+                    categoria: produtoAtual.categoria,
+                    estoque: produtoAtual.estoque,
+                })));
+                break;
+            case "2":
+                executarAcao(() => {
+                    const id = lerNumero("ID do produto: ");
+                    const produtoAtual = buscarProduto(id);
+                    if (!produtoAtual) {
+                        throw new Error("Produto não encontrado.");
+                    }
+                    const novoEstoque = lerNumero(`Novo estoque para ${produtoAtual.nome}: `);
+                    atualizarProduto(id, { estoque: novoEstoque });
+                    console.log("Estoque atualizado.");
+                });
+                break;
+            case "0":
+                break;
+            default:
+                console.log("Opção inválida.");
+        }
+    }
+}
 
 //===========================================================================================================================
 
+
+//Menu Principal -> Cadastro/Consulta de CLIENTES
+function menuCarrinho(): void {
+    let opcao = "";
+    while (opcao !== "0") {
+        console.log("\n=== Carrinho ===");
+        console.log("1 - Criar/abrir carrinho por ID ou nome do cliente");
+        console.log("2 - Consultar carrinho por ID ou nome do cliente");
+        console.log("3 - Adicionar produto ao carrinho");
+        console.log("4 - Alterar quantidade de um produto");
+        console.log("5 - Excluir produto do carrinho");
+        console.log("6 - Mostrar subtotal de cada produto e total da compra");
+        console.log("0 - Voltar");
+        opcao = prompt("Escolha: ").trim();
+        switch (opcao) {
+            case "1":
+                executarAcao(() => executarComCarrinho((clienteAtual) => {
+                    listarItens(clienteAtual.id);
+                    console.log(`Carrinho criado/aberto para ${clienteAtual.nome}.`);
+                }));
+                break;
+            case "2":
+            case "6":
+                executarAcao(() => executarComCarrinho(imprimirCarrinho));
+                break;
+            case "3":
+                executarAcao(() => executarComCarrinho((clienteAtual) => {
+                    const produtoId = lerNumero("ID do produto: ");
+                    const quantidade = lerNumero("Quantidade a adicionar: ");
+                    adicionarItem(clienteAtual.id, produtoId, quantidade);
+                    console.log("Produto adicionado ao carrinho.");
+                }));
+                break;
+            case "4":
+                executarAcao(() => executarComCarrinho((clienteAtual) => {
+                    const produtoId = lerNumero("ID do produto: ");
+                    const quantidade = lerNumero("Nova quantidade: ");
+                    alterarQuantidade(clienteAtual.id, produtoId, quantidade);
+                    console.log("Quantidade atualizada.");
+                }));
+                break;
+            case "5":
+                executarAcao(() => executarComCarrinho((clienteAtual) => {
+                    const produtoId =lerNumero("ID do produto a excluir: ");
+                    removerItem(clienteAtual.id, produtoId);
+                    console.log("Produto removido do carrinho.");
+                }));
+                break;
+            case "0":
+                break;
+            default:
+                console.log("Opção inválida.");
+        }
+    }
+}
 
 
 //===========================================================================================================================
@@ -254,39 +369,54 @@ function lerNumero(pergunta: string): number{
 
 //Consultar CLIENTE pelo ID
 function selecionaCliente(): cliente | undefined {
-    const tipoBusca = prompt(`Escolha qual o tipo de informação que deseja consultar o cliente:
-        [1] - ID
-        [2] - Nome
-        [0] - Voltar`).trim();
-    if ( tipoBusca === "1"){
+    console.log(`
+Escolha qual o tipo de informação que deseja consultar o cliente:
+    [1] - ID
+    [2] - Nome
+    [0] - Voltar`);
+    const tipoBusca = prompt("Escolha uma opção: ").trim();
+
+    if (tipoBusca === "0") {
+        return undefined;
+    }
+
+    if (tipoBusca === "1") {
         const id = lerNumero(`Digite a ID do Cliente: `);
         const clienteEncontrado = buscarClientes(id);
-        if (!clienteEncontrado){
+        if (!clienteEncontrado) {
             console.log(`Cliente com ID ${id}, não encontrado.`);
             return undefined;
         }
-        return clienteEncontrado!;
+        return clienteEncontrado;
     }
-    if (tipoBusca === "2"){
+
+    if (tipoBusca === "2") {
         const nome = lerTexto(`Digite o nome ou parte do nome do cliente para realizar a busca: `);
-        const buscaCliente = listarClientes().filter((clienteAtual)=>
-            clienteAtual.nome.includes(nome),
-    );
-    if (buscaCliente.length === 0){
-        console.log(`Nenhum cliente encontrado com esse nome...`);
+        const buscaCliente = listarClientes().filter((clienteAtual) =>
+            clienteAtual.nome.toLowerCase().includes(nome.toLowerCase()),
+        );
+
+        if (buscaCliente.length === 0) {
+            console.log(`Nenhum cliente encontrado com esse nome...`);
+            return undefined;
+        }
+
+        if (buscaCliente.length === 1) {
+            return buscaCliente[0];
+        }
+
+        console.log(buscaCliente);
+        const id = lerNumero(`Há mais de um resultado. Digite o ID desejado: `);
+        const clienteEscolhido = buscaCliente.find((clienteAtual) => clienteAtual.id === id);
+        if (!clienteEscolhido) {
+            console.log(`O ID informado não está entre os clientes encontrados.`);
+            return undefined;
+        }
+        return clienteEscolhido;
     }
-    if (buscaCliente.length === 1){
-        return buscaCliente[0]!;
-    }
-    console.log(buscaCliente);
-    const id = lerNumero(`Há mais de um resultado. Digite o ID desejado: `);
-    const clienteEscolhido = buscaCliente.find((clienteAtual) => clienteAtual.id === id);
-    if (!clienteEscolhido){
-        console.log(`O ID informado não está enre os clientes encontrados.`);
-    }
-    console.log(`Escolha 1 para buscar por ID ou 2 para buscar por NOME.`);
-    return clienteEscolhido;
-    }
+
+    console.log("Opção inválida.");
+    return undefined;
 }
 
 //===========================================================================================================================
@@ -378,8 +508,8 @@ function menuPrincipal(): void {
             O que deseja fazer?
             [1] - Cadastro/Consulta de Clientes
             [2] - Cadastro/Consulta de Produtos
-            [3] - Incluir/Consultar Pedidos
-            [4] - Incluir/Consultar Carrinho de Compras
+            [3] - Incluir/Consultar Carrinho de Compras
+            [4] - Incluir/Consultar Pedidos
             [5] - Consultar Estoque
             [6] - Relatórios
             [0] - Sair
@@ -393,15 +523,16 @@ function menuPrincipal(): void {
                     subMenuProdutos();
                     break;
                 case "3":
-                    subMenuPedidos()
+                    menuCarrinho();
                     break;
                 case "4":
+                    subMenuPedidos();
                     break;
                 case "5":
+                    menuEstoque();
                     break;
                 case "6":
-                    break;
-                case "7":
+                    menuRelatorios();
                     break;
                 case "0":
                     console.log(`Sistema finalizado pelo usuário. Até logo! ♥`);
@@ -413,5 +544,4 @@ function menuPrincipal(): void {
     }
 }
 menuPrincipal()
-
 //===========================================================================================================================
